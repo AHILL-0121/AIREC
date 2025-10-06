@@ -67,9 +67,11 @@ class JobMatchingTester:
         """Test authentication flow"""
         print("\n=== Testing Authentication ===")
         
-        # Test candidate signup
+        # Test candidate signup with unique email
+        import time
+        timestamp = str(int(time.time()))
         candidate_data = {
-            "email": "alice.johnson@example.com",
+            "email": f"alice.johnson.{timestamp}@example.com",
             "password": "SecurePass123!",
             "full_name": "Alice Johnson",
             "role": "candidate"
