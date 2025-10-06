@@ -92,9 +92,9 @@ class JobMatchingTester:
         except Exception as e:
             self.log_result("Candidate signup", False, str(e))
         
-        # Test recruiter signup
+        # Test recruiter signup with unique email
         recruiter_data = {
-            "email": "john.smith@techcorp.com",
+            "email": f"john.smith.{timestamp}@techcorp.com",
             "password": "RecruiterPass456!",
             "full_name": "John Smith",
             "role": "recruiter"
