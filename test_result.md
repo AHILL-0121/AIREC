@@ -289,13 +289,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Authentication System"
     - "Resume Upload and AI Parsing"
-    - "Job Management"
-    - "AI Matching Algorithm"
-  stuck_tasks: []
-  test_all: true
-  test_priority: "high_first"
+  stuck_tasks: 
+    - "Resume Upload and AI Parsing"
+  test_all: false
+  test_priority: "stuck_first"
 
 agent_communication:
   - agent: "main"
