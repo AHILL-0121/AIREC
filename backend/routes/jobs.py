@@ -98,6 +98,10 @@ async def create_job(
     }
     
     await db.jobs.insert_one(job_doc)
+    
+    # Remove MongoDB _id and ensure proper serialization
+    if "_id" in job_doc:
+        del job_doc["_id"]
     job_doc["posted_by"] = str(job_doc["posted_by"])
     
     return {
