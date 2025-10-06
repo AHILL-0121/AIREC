@@ -134,7 +134,7 @@ class JobMatchingTester:
         # Test invalid credentials
         try:
             invalid_login = {
-                "email": "alice.johnson@example.com",
+                "email": f"alice.johnson.{timestamp}@example.com",
                 "password": "wrongpassword"
             }
             response = requests.post(f"{self.base_url}/auth/login", json=invalid_login)
