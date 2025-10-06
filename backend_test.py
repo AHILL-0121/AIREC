@@ -117,7 +117,7 @@ class JobMatchingTester:
         
         # Test login
         login_data = {
-            "email": "alice.johnson@example.com",
+            "email": f"alice.johnson.{timestamp}@example.com",
             "password": "SecurePass123!"
         }
         
