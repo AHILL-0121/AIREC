@@ -88,36 +88,57 @@ Return this exact JSON structure:
 def extract_skills_fallback(text: str) -> list:
     """Fallback skill extraction using keywords"""
     common_skills = [
-        "python", "java", "javascript", "react", "node", "sql", "mongodb",
-        "aws", "docker", "kubernetes", "machine learning", "ai", "data science",
-        "project management", "agile", "scrum", "git", "ci/cd", "leadership"
+        "Python", "Java", "JavaScript", "TypeScript", "React", "Angular", "Vue",
+        "Node.js", "Express", "Django", "Flask", "FastAPI",
+        "SQL", "PostgreSQL", "MySQL", "MongoDB", "Redis",
+        "AWS", "Azure", "GCP", "Docker", "Kubernetes",
+        "Git", "CI/CD", "Jenkins", "GitHub Actions",
+        "Machine Learning", "AI", "Data Science", "TensorFlow", "PyTorch",
+        "HTML", "CSS", "REST API", "GraphQL",
+        "Agile", "Scrum", "Project Management", "Leadership",
+        "Communication", "Problem Solving", "Team Collaboration"
     ]
     
     text_lower = text.lower()
     found_skills = []
     
     for skill in common_skills:
-        if skill in text_lower:
-            found_skills.append(skill.title())
+        if skill.lower() in text_lower:
+            found_skills.append(skill)
     
-    return found_skills[:10]  # Return top 10
+    # Remove duplicates and return top 15
+    return list(set(found_skills))[:15]
 
 def extract_experience_fallback(text: str) -> int:
     """Fallback experience extraction"""
     import re
     
-    # Look for patterns like "5 years", "5+ years", etc.
+    # Look for patterns like "5 years", "5+ years", "2020-2024", etc.
     patterns = [
         r'(\d+)\s*(?:\+)?\s*years?\s+(?:of\s+)?experience',
-        r'experience\s+(?:of\s+)?(\d+)\s*(?:\+)?\s*years?'
+        r'experience\s+(?:of\s+)?(\d+)\s*(?:\+)?\s*years?',
+        r'(\d{4})\s*-\s*(\d{4})',  # Year ranges like 2020-2024
+        r'(\d{4})\s*-\s*present',  # 2020-present
     ]
     
-    for pattern in patterns:
-        match = re.search(pattern, text.lower())
-        if match:
-            return int(match.group(1))
+    years = []
     
-    return 0
+    # Try to find year patterns
+    for pattern in patterns[:2]:
+        matches = re.findall(pattern, text.lower())
+        for match in matches:
+            if isinstance(match, str):
+                years.append(int(match))
+    
+    # Try to find year ranges
+    year_range_pattern = r'(\d{4})\s*-\s*(\d{4}|present)'
+    year_ranges = re.findall(year_range_pattern, text.lower())
+    for start, end in year_ranges:
+        end_year = 2025 if end == 'present' else int(end)
+        start_year = int(start)
+        years.append(end_year - start_year)
+    
+    return max(years) if years else 0
 
 def extract_text_from_pdf(file_path: str) -> str:
     """Extract text content from PDF file"""
