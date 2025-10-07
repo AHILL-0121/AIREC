@@ -421,7 +421,7 @@ const RecruiterDashboard = () => {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="space-y-2">
                           {recentJobs.slice(0, 3).map(job => (
-                            <div key={job._id} className="flex items-center">
+                            <div key={job.id || job._id} className="flex items-center">
                               <div className="w-32 truncate mr-2">
                                 <span className="text-xs">{job.title}</span>
                               </div>
@@ -538,7 +538,7 @@ const RecruiterDashboard = () => {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="space-y-2">
                           {['JavaScript', 'React', 'Python', 'Machine Learning', 'SQL'].map((skill, idx) => (
-                            <div key={idx} className="flex items-center">
+                            <div key={skill} className="flex items-center">
                               <div className="w-32 truncate mr-2">
                                 <span className="text-xs">{skill}</span>
                               </div>
@@ -582,7 +582,7 @@ const RecruiterDashboard = () => {
                     <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                       {diversityMetrics.gender_diversity?.map((item, idx) => (
                         <div
-                          key={idx}
+                          key={`gender-bar-${item.label || idx}`}
                           className={`h-full float-left ${
                             idx === 0 ? 'bg-blue-500' : 
                             idx === 1 ? 'bg-pink-500' : 'bg-purple-500'
@@ -593,7 +593,7 @@ const RecruiterDashboard = () => {
                     </div>
                     <div className="flex flex-wrap gap-4 text-xs">
                       {diversityMetrics.gender_diversity?.map((item, idx) => (
-                        <div key={idx} className="flex items-center">
+                        <div key={`gender-${item.label || idx}`} className="flex items-center">
                           <div className={`w-3 h-3 rounded-full mr-1 ${
                             idx === 0 ? 'bg-blue-500' : 
                             idx === 1 ? 'bg-pink-500' : 'bg-purple-500'
@@ -609,7 +609,7 @@ const RecruiterDashboard = () => {
                     <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                       {diversityMetrics.experience_distribution?.map((item, idx) => (
                         <div
-                          key={idx}
+                          key={`experience-bar-${item.label || idx}`}
                           className={`h-full float-left ${
                             idx === 0 ? 'bg-green-500' : 
                             idx === 1 ? 'bg-yellow-500' : 'bg-red-500'
@@ -620,7 +620,7 @@ const RecruiterDashboard = () => {
                     </div>
                     <div className="flex flex-wrap gap-4 text-xs">
                       {diversityMetrics.experience_distribution?.map((item, idx) => (
-                        <div key={idx} className="flex items-center">
+                        <div key={`experience-${item.label || idx}`} className="flex items-center">
                           <div className={`w-3 h-3 rounded-full mr-1 ${
                             idx === 0 ? 'bg-green-500' : 
                             idx === 1 ? 'bg-yellow-500' : 'bg-red-500'
@@ -636,7 +636,7 @@ const RecruiterDashboard = () => {
                     <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                       {diversityMetrics.education_distribution?.map((item, idx) => (
                         <div
-                          key={idx}
+                          key={`education-bar-${item.label || idx}`}
                           className={`h-full float-left ${
                             idx === 0 ? 'bg-indigo-500' : 
                             idx === 1 ? 'bg-orange-500' : 
@@ -648,7 +648,7 @@ const RecruiterDashboard = () => {
                     </div>
                     <div className="flex flex-wrap gap-4 text-xs">
                       {diversityMetrics.education_distribution?.map((item, idx) => (
-                        <div key={idx} className="flex items-center">
+                        <div key={`education-${item.label || idx}`} className="flex items-center">
                           <div className={`w-3 h-3 rounded-full mr-1 ${
                             idx === 0 ? 'bg-indigo-500' : 
                             idx === 1 ? 'bg-orange-500' : 

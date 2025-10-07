@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../contexts/AuthContext';
-import { applicationService, jobService } from '../../services';
+import { applicationService, jobService, resumeService } from '../../services';
 import { Button } from '../../components/ui/button';
 import {
   Card,
@@ -27,16 +27,18 @@ import {
   SelectValue,
 } from '../../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Download, ExternalLink, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { toast } from '../../hooks/use-toast';
+import { Download, ExternalLink, CheckCircle, Clock, XCircle, Eye, User, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Applications = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [downloadingResume, setDownloadingResume] = useState({});
 
   useEffect(() => {
     loadData();
@@ -86,19 +88,45 @@ const Applications = () => {
           app.id === applicationId ? { ...app, status: newStatus } : app
         ));
         
-        toast({
-          title: "Status updated",
-          description: `Application status changed to ${newStatus}`,
-        });
+        toast.success(`Application status changed to ${newStatus}`);
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      toast({
-        title: "Error updating status",
-        description: "There was a problem updating the application status",
-        variant: "destructive",
-      });
+      toast.error("There was a problem updating the application status");
     }
+  };
+
+  const handleDownloadResume = async (candidateId, candidateName) => {
+    setDownloadingResume(prev => ({ ...prev, [candidateId]: true }));
+    try {
+      const response = await resumeService.downloadCandidateResume(candidateId);
+      
+      // Create blob and download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${candidateName}_resume.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Resume downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading resume:', error);
+      if (error.response?.status === 404) {
+        toast.error('Resume not found for this candidate');
+      } else {
+        toast.error('Failed to download resume');
+      }
+    } finally {
+      setDownloadingResume(prev => ({ ...prev, [candidateId]: false }));
+    }
+  };
+
+  const handleViewProfile = (candidateId) => {
+    navigate(`/recruiter/candidate-profile/${candidateId}`);
   };
 
   // Filter applications based on selected job and status
@@ -260,11 +288,30 @@ const Applications = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(`/api/resume/download/${app.resume_id}`, '_blank')}
-                            disabled={!app.resume_id}
+                            onClick={() => handleViewProfile(app.candidate_id)}
+                            disabled={!app.candidate_id}
                           >
-                            <Download className="h-3.5 w-3.5 mr-1" />
-                            Resume
+                            <User className="h-3.5 w-3.5 mr-1" />
+                            Profile
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadResume(app.candidate_id, app.candidate?.full_name || 'candidate')}
+                            disabled={!app.candidate_id || downloadingResume[app.candidate_id]}
+                          >
+                            {downloadingResume[app.candidate_id] ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                Downloading...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-3.5 w-3.5 mr-1" />
+                                Resume
+                              </>
+                            )}
                           </Button>
                           
                           <Select

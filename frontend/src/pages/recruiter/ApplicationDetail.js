@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../contexts/AuthContext';
-import { applicationService } from '../../services';
+import { applicationService, resumeService } from '../../services';
 import { Button } from '../../components/ui/button';
 import {
   Card,
@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { ArrowLeft, Download, Mail, MapPin, Calendar, Briefcase, GraduationCap, Award, User } from 'lucide-react';
+import { ArrowLeft, Download, Mail, MapPin, Calendar, Briefcase, GraduationCap, Award, User, Loader2 } from 'lucide-react';
 import { toast } from '../../hooks/use-toast';
 
 const ApplicationDetail = () => {
@@ -27,6 +27,7 @@ const ApplicationDetail = () => {
   const { user } = useAuth();
   const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingResume, setDownloadingResume] = useState(false);
 
   useEffect(() => {
     loadApplicationDetail();
@@ -82,6 +83,95 @@ const ApplicationDetail = () => {
         description: "There was a problem updating the application status",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDownloadResume = async () => {
+    if (!application?.candidate_id) {
+      toast({
+        title: "Error",
+        description: "Candidate information not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDownloadingResume(true);
+    
+    try {
+      // Get the auth token from cookies
+      const token = document.cookie.split('; ')
+        .find(row => row.startsWith('auth_token='))
+        ?.split('=')[1];
+        
+      if (!token) {
+        throw new Error('Authentication token not found. Please login again.');
+      }
+
+      console.log('Downloading resume for candidate:', application.candidate_id);
+      
+      // Create a download link with authentication header
+      const downloadUrl = `http://localhost:8000/api/resume/download/${application.candidate_id}`;
+      
+      // Use fetch with proper headers for binary download
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/pdf'
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Resume not found for this candidate');
+        } else if (response.status === 403) {
+          throw new Error('Access denied. You may not have permission to download this resume.');
+        } else {
+          throw new Error(`Download failed with status: ${response.status}`);
+        }
+      }
+
+      // Get the blob from response
+      const blob = await response.blob();
+      console.log('Downloaded blob size:', blob.size, 'bytes');
+      
+      if (blob.size === 0) {
+        throw new Error('Downloaded file is empty');
+      }
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${application.candidate?.full_name || 'candidate'}_resume.pdf`;
+      link.style.display = 'none';
+      
+      // Add to DOM, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+      
+      toast({
+        title: "Success",
+        description: "Resume downloaded successfully!",
+      });
+      
+    } catch (error) {
+      console.error('Error downloading resume:', error);
+      
+      toast({
+        title: "Download Failed",
+        description: error.message || "There was a problem downloading the resume",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingResume(false);
     }
   };
 
@@ -351,18 +441,27 @@ const ApplicationDetail = () => {
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={() => window.open(`/api/resume/download/${application.resume_id}`, '_blank')}
-                  disabled={!application.resume_id}
+                  onClick={handleDownloadResume}
+                  disabled={!application?.candidate_id || downloadingResume}
                 >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Resume
+                  {downloadingResume ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Resume
+                    </>
+                  )}
                 </Button>
                 
-                {candidate?.email && (
+                {application?.candidate?.email && (
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => window.location.href = `mailto:${candidate.email}`}
+                    onClick={() => window.location.href = `mailto:${application.candidate.email}`}
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Send Email

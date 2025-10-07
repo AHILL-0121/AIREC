@@ -184,11 +184,11 @@ const UploadResume = () => {
                 </div>
               )}
 
-              {/* Parsed Data Display */}
+              {/* Enhanced Parsed Data Display */}
               {parsedData && (
                 <div className="space-y-4 mt-6">
                   <div className={`flex items-center space-x-2 ${
-                    parsedData.parsing_method === 'gemini_ai' || parsedData.parsing_method === 'client_side_gemini' 
+                    parsedData.parsing_method?.includes('openrouter') || parsedData.parsing_method === 'gemini_ai' || parsedData.parsing_method === 'client_side_gemini' 
                       ? 'text-green-600' 
                       : parsedData.parsing_method === 'fallback' || parsedData.parsing_method === 'manual' 
                       ? 'text-amber-600' 
@@ -196,6 +196,7 @@ const UploadResume = () => {
                   }`}>
                     <CheckCircle className="h-5 w-5" />
                     <span className="font-semibold">
+                      {parsedData.parsing_method?.includes('openrouter') && 'Resume Parsed Successfully with OpenRouter AI!'}
                       {parsedData.parsing_method === 'gemini_ai' && 'Resume Parsed Successfully with Gemini AI!'}
                       {parsedData.parsing_method === 'client_side_gemini' && 'Resume Parsed Successfully with Client-Side Gemini AI!'}
                       {parsedData.parsing_method === 'fallback' && 'Resume Parsed with Basic Extraction'}
@@ -210,7 +211,31 @@ const UploadResume = () => {
                     </div>
                   )}
                   
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                    {/* Contact Information */}
+                    {(parsedData.phone || parsedData.location) && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2">Contact Information:</h4>
+                        <div className="space-y-1">
+                          {parsedData.phone && (
+                            <p className="text-sm text-gray-600">📞 {parsedData.phone}</p>
+                          )}
+                          {parsedData.location && (
+                            <p className="text-sm text-gray-600">📍 {parsedData.location}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Professional Summary */}
+                    {parsedData.summary && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2">Professional Summary:</h4>
+                        <p className="text-sm text-gray-600">{parsedData.summary}</p>
+                      </div>
+                    )}
+
+                    {/* Skills */}
                     <div>
                       <h4 className="font-semibold text-sm mb-2">Extracted Skills:</h4>
                       {parsedData.skills && parsedData.skills.length > 0 ? (
@@ -226,19 +251,38 @@ const UploadResume = () => {
                       )}
                     </div>
 
-                    <div>
-                      <h4 className="font-semibold text-sm mb-1">Experience:</h4>
-                      <p className="text-sm text-gray-600">{parsedData.experience_years} years</p>
+                    {/* Experience and Job Titles */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-sm mb-1">Experience:</h4>
+                        <p className="text-sm text-gray-600">{parsedData.experience_years || 0} years</p>
+                      </div>
+                      {parsedData.job_titles && parsedData.job_titles.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-sm mb-1">Job Titles:</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {parsedData.job_titles.map((title, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                                {title}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
+                    {/* Education */}
                     {parsedData.education && parsedData.education.length > 0 ? (
                       <div>
                         <h4 className="font-semibold text-sm mb-2">Education:</h4>
-                        {parsedData.education.map((edu, idx) => (
-                          <p key={idx} className="text-sm text-gray-600">
-                            {edu.degree} - {edu.institution} {edu.year ? `(${edu.year})` : ''}
-                          </p>
-                        ))}
+                        <div className="space-y-2">
+                          {parsedData.education.map((edu, idx) => (
+                            <div key={idx} className="p-2 bg-white rounded border">
+                              <p className="text-sm font-medium">{edu.degree}</p>
+                              <p className="text-xs text-gray-600">{edu.institution} {edu.year ? `(${edu.year})` : ''}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       <div>
@@ -246,11 +290,85 @@ const UploadResume = () => {
                         <p className="text-sm text-gray-500 italic">No education details extracted. You can add them manually in your profile.</p>
                       </div>
                     )}
+
+                    {/* Achievements */}
+                    {parsedData.achievements && parsedData.achievements.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2">Achievements:</h4>
+                        <ul className="text-sm text-gray-600 space-y-1">
+                          {parsedData.achievements.map((achievement, idx) => (
+                            <li key={idx} className="flex items-start">
+                              <span className="text-green-600 mr-2">✓</span>
+                              {achievement}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Certifications */}
+                    {parsedData.certifications && parsedData.certifications.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2">Certifications:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {parsedData.certifications.map((cert, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
+                              {cert}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Languages */}
+                    {parsedData.languages && parsedData.languages.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2">Languages:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {parsedData.languages.map((lang, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">
+                              {lang}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Projects */}
+                    {parsedData.projects && parsedData.projects.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-2">Projects:</h4>
+                        <div className="space-y-2">
+                          {parsedData.projects.map((project, idx) => (
+                            <div key={idx} className="p-2 bg-white rounded border">
+                              <p className="text-sm font-medium">{project.name}</p>
+                              {project.description && (
+                                <p className="text-xs text-gray-600 mb-1">{project.description}</p>
+                              )}
+                              {project.technologies && project.technologies.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {project.technologies.map((tech, techIdx) => (
+                                    <span key={techIdx} className="px-1 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                                      {tech}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <Button className="w-full" onClick={() => navigate('/candidate/dashboard')}>
-                    Continue to Dashboard
-                  </Button>
+                  <div className="flex gap-4">
+                    <Button className="flex-1" onClick={() => navigate('/candidate/profile')}>
+                      View Full Profile
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={() => navigate('/candidate/dashboard')}>
+                      Continue to Dashboard
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

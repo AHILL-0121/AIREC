@@ -109,7 +109,7 @@ def parse_resume_with_ai(resume_text: str) -> dict:
         # Truncate resume text if too long (keep first 2000 chars)
         resume_text_truncated = resume_text[:2000] if len(resume_text) > 2000 else resume_text
         
-        # Create a simpler prompt to improve reliability
+        # Create an enhanced prompt to extract comprehensive profile information
         prompt = f"""Extract key information from this resume text.
         
 Resume text:
@@ -127,10 +127,31 @@ Extract and return ONLY a JSON object with this exact structure:
     }}
   ],
   "achievements": ["achievement1"],
-  "job_titles": ["title1"]
+  "job_titles": ["title1"],
+  "summary": "brief professional summary",
+  "phone": "phone number if found",
+  "location": "city, state/country if found", 
+  "certifications": ["cert1", "cert2"],
+  "languages": ["language1", "language2"],
+  "projects": [
+    {{
+      "name": "project name",
+      "description": "brief description",
+      "technologies": ["tech1", "tech2"]
+    }}
+  ]
 }}
 
-Format your entire response as valid JSON only. No explanations, no other text."""
+Instructions:
+- Extract technical skills, soft skills, and tools/technologies
+- Calculate years of experience from work history
+- Include all degrees and certifications
+- Extract contact information if available
+- Include notable achievements and accomplishments
+- List job titles/roles held
+- Extract project details if mentioned
+- For missing fields, use empty strings or empty arrays
+- Return valid JSON only, no explanations."""
         
         logger.info("Sending request to Gemini API")
         
@@ -294,9 +315,25 @@ def extract_text_from_pdf(file_path: str) -> str:
         with open(file_path, 'rb') as file:
             pdf_reader = PyPDF2.PdfReader(file)
             text = ""
-            for page in pdf_reader.pages:
-                text += page.extract_text()
+            
+            # Log PDF information for debugging
+            logger = get_logger("resume_parser")
+            logger.info(f"PDF has {len(pdf_reader.pages)} pages")
+            
+            for i, page in enumerate(pdf_reader.pages):
+                page_text = page.extract_text()
+                logger.info(f"Page {i+1} extracted {len(page_text)} characters")
+                text += page_text + "\n"
+            
+            # Clean up the text
+            text = text.strip()
+            logger.info(f"Total extracted text length: {len(text)}")
+            
+            if len(text) == 0:
+                logger.warning("No text could be extracted from PDF - may be image-based or corrupted")
+            
             return text
     except Exception as e:
-        print(f"Error extracting PDF text: {e}")
+        logger = get_logger("resume_parser")
+        logger.error(f"Error extracting PDF text: {e}")
         return ""

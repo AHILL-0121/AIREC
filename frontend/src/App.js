@@ -16,6 +16,7 @@ import CandidateDashboard from './pages/candidate/Dashboard';
 import UploadResume from './pages/candidate/UploadResume';
 import ProfileEdit from './pages/candidate/ProfileEdit';
 import Profile from './pages/Profile';
+import EnhancedProfile from './pages/candidate/EnhancedProfile';
 import Jobs from './pages/Jobs';
 import JobDetails from './pages/JobDetails';
 import Applications from './pages/candidate/Applications';
@@ -28,6 +29,7 @@ import PostJob from './pages/recruiter/PostJob';
 import RecruiterApplications from './pages/recruiter/Applications';
 import ApplicationDetail from './pages/recruiter/ApplicationDetail';
 import RecruiterJobDetails from './pages/recruiter/JobDetails';
+import CandidateProfileView from './pages/recruiter/CandidateProfileView';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, role }) => {
@@ -183,6 +185,15 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      
+      <Route
+        path="/candidate/enhanced-profile"
+        element={
+          <ProtectedRoute role="candidate">
+            <EnhancedProfile />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Recruiter Routes */}
       <Route
@@ -235,6 +246,15 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="recruiter">
             <PostJob />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/recruiter/candidate/:candidateId"
+        element={
+          <ProtectedRoute role="recruiter">
+            <CandidateProfileView />
           </ProtectedRoute>
         }
       />
@@ -333,7 +353,7 @@ function App() {
   
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <ErrorBoundary>
             <AppRoutes />

@@ -19,6 +19,11 @@ export const profileService = {
     const response = await api.put(`/profile/${userId}`, profileData);
     return response.data;
   },
+
+  getCandidateProfile: async (candidateId) => {
+    const response = await api.get(`/profile/candidate/${candidateId}`);
+    return response.data;
+  },
 };
 
 export const applicationService = {
@@ -85,19 +90,17 @@ export const resumeService = {
   uploadResume: async (file) => {
     try {
       const formData = new FormData();
-      formData.append('file', file); // Match the backend's expected field name 'file'
+      formData.append('file', file);
       
       const response = await api.post('/resume/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        // Ensure we don't transform the FormData
         transformRequest: (data) => data,
       });
       
       return response.data;
     } catch (error) {
-      // Make sure we rethrow the error after it's logged by axios interceptor
       throw error;
     }
   },
@@ -105,6 +108,13 @@ export const resumeService = {
   getParsedData: async () => {
     const response = await api.get('/resume/parsed-data');
     return response.data;
+  },
+
+  downloadCandidateResume: async (candidateId) => {
+    const response = await api.get(`/resume/download/${candidateId}`, {
+      responseType: 'blob',
+    });
+    return response;
   },
 };
 

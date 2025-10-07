@@ -28,7 +28,7 @@ def parse_resume_with_openrouter(resume_text: str) -> dict:
     # Truncate resume text if too long
     resume_text_truncated = resume_text[:2000] if len(resume_text) > 2000 else resume_text
     
-    # Create a prompt for resume parsing
+    # Create an enhanced prompt for comprehensive resume parsing
     prompt = f"""Extract key information from this resume text.
         
 Resume text:
@@ -46,7 +46,19 @@ Extract and return ONLY a JSON object with this exact structure:
     }}
   ],
   "achievements": ["achievement1"],
-  "job_titles": ["title1"]
+  "job_titles": ["title1"],
+  "summary": "brief professional summary",
+  "phone": "phone number if found",
+  "location": "city, state/country if found", 
+  "certifications": ["cert1", "cert2"],
+  "languages": ["language1", "language2"],
+  "projects": [
+    {{
+      "name": "project name",
+      "description": "brief description",
+      "technologies": ["tech1", "tech2"]
+    }}
+  ]
 }}
 
 Format your entire response as valid JSON only. No explanations, no other text."""

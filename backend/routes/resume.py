@@ -5,6 +5,7 @@ from utils.db import get_database
 import os
 import uuid
 from pathlib import Path
+from datetime import datetime
 
 router = APIRouter()
 
@@ -17,23 +18,47 @@ async def upload_resume(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
+    # Validate file exists and has a filename
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
     # Validate file type
-    if not file.filename.endswith('.pdf'):
+    if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
     
-    # Save file
-    file_id = str(uuid.uuid4())
-    file_path = UPLOADS_DIR / f"{file_id}_{file.filename}"
+    # Read file content first to validate size
+    content = await file.read()
+    
+    # Validate file size (limit to 10MB)
+    if len(content) == 0:
+        raise HTTPException(status_code=400, detail="File is empty")
+    
+    if len(content) > 10 * 1024 * 1024:  # 10MB
+        raise HTTPException(status_code=400, detail="File size too large (max 10MB)")
+    
+    # Create user-specific directory
+    user_dir = UPLOADS_DIR / current_user["id"]
+    user_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save file with original filename (overwrite previous resume)
+    file_path = user_dir / f"resume_{file.filename}"
     
     with open(file_path, "wb") as f:
-        content = await file.read()
         f.write(content)
     
     # Extract text from PDF
     resume_text = extract_text_from_pdf(str(file_path))
 
-    if not resume_text:
-        raise HTTPException(status_code=400, detail="Could not extract text from PDF")
+    if not resume_text or resume_text.strip() == "":
+        # Clean up the uploaded file if text extraction fails
+        try:
+            os.remove(file_path)
+        except:
+            pass
+        raise HTTPException(
+            status_code=400, 
+            detail="Could not extract text from PDF. This may be an image-based PDF or the file may be corrupted. Please try uploading a text-based PDF or convert your document to text format."
+        )
 
     # Get logger for this route
     from utils.logger import get_logger
@@ -53,7 +78,7 @@ async def upload_resume(
         # Log successful parsing
         logger.info(f"Resume parsed successfully using {parsing_method_msg}")
         
-        # Update user profile with parsed data
+        # Update user profile with comprehensive parsed data
         db = get_database()
         update_data = {
             "skills": parsed_data.get("skills", []),
@@ -62,7 +87,16 @@ async def upload_resume(
             "achievements": parsed_data.get("achievements", []),
             "job_titles": parsed_data.get("job_titles", []),
             "resume_file": str(file_path),
-            "profile_complete": True
+            "resume_filename": file.filename,
+            "resume_uploaded_at": datetime.now().isoformat(),
+            "profile_complete": True,
+            # Additional profile details from resume
+            "bio": parsed_data.get("summary", ""),
+            "phone": parsed_data.get("phone", ""),
+            "location": parsed_data.get("location", ""),
+            "certifications": parsed_data.get("certifications", []),
+            "languages": parsed_data.get("languages", []),
+            "projects": parsed_data.get("projects", [])
         }
         
         await db.users.update_one(
@@ -116,6 +150,50 @@ async def get_parsed_resume_data(current_user: dict = Depends(get_current_user))
             "experience": current_user.get("experience", 0),
             "education": current_user.get("education", []),
             "achievements": current_user.get("achievements", []),
-            "job_titles": current_user.get("job_titles", [])
+            "job_titles": current_user.get("job_titles", []),
+            "bio": current_user.get("bio", ""),
+            "phone": current_user.get("phone", ""),
+            "location": current_user.get("location", ""),
+            "certifications": current_user.get("certifications", []),
+            "languages": current_user.get("languages", []),
+            "projects": current_user.get("projects", []),
+            "resume_filename": current_user.get("resume_filename", ""),
+            "resume_uploaded_at": current_user.get("resume_uploaded_at", "")
         }
     }
+
+@router.get("/download/{user_id}")
+async def download_candidate_resume(
+    user_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Allow recruiters to download candidate resumes"""
+    # Only recruiters can access this endpoint
+    if current_user.get("role") != "recruiter":
+        raise HTTPException(status_code=403, detail="Access denied. Only recruiters can download resumes.")
+    
+    # Get candidate information
+    db = get_database()
+    candidate = await db.users.find_one({"id": user_id, "role": "candidate"})
+    
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    # Check if candidate has uploaded a resume
+    resume_file = candidate.get("resume_file")
+    if not resume_file:
+        raise HTTPException(status_code=404, detail="Candidate has not uploaded a resume")
+    
+    # Construct file path
+    file_path = Path(resume_file)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Resume file not found")
+    
+    from fastapi.responses import FileResponse
+    
+    # Return the file
+    return FileResponse(
+        path=str(file_path),
+        filename=candidate.get("resume_filename", "resume.pdf"),
+        media_type="application/pdf"
+    )
