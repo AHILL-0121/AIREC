@@ -103,8 +103,18 @@ async def get_match_score(
     
     db = get_database()
     
-    # Get job
+    # Get job - try both id field and MongoDB _id
     job = await db.jobs.find_one({"id": job_id})
+    
+    # If not found by id, try MongoDB _id (if valid ObjectId)
+    if not job:
+        try:
+            from bson.objectid import ObjectId
+            if ObjectId.is_valid(job_id):
+                job = await db.jobs.find_one({"_id": ObjectId(job_id)})
+        except ImportError:
+            pass
+    
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     

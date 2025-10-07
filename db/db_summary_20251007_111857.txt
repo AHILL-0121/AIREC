@@ -1,0 +1,24 @@
+JOB MATCHING DATABASE SUMMARY
+==================================================
+Generated: 2025-10-07T11:18:57.914223
+Database: job_matching_db
+
+
+USERS
+-----
+Error reading users: Event loop is closed
+
+JOBS
+----
+Error reading jobs: Event loop is closed
+
+APPLICATIONS
+------------
+Error reading applications: Event loop is closed
+
+PROFILES
+--------
+Error reading profiles: Event loop is closed
+
+TOTAL DATABASE DOCUMENTS: 0
+Generated at: 2025-10-07 11:18:57

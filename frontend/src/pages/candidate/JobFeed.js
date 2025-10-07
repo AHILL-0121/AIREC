@@ -65,12 +65,16 @@ const JobFeed = () => {
 
   const handleSearch = async () => {
     try {
+      setLoading(true);
       const response = await jobService.searchJobs({ query: searchQuery });
       if (response.success) {
         setJobs(response.data);
+        setActiveTab('jobs');
       }
     } catch (error) {
       toast.error('Search failed');
+    } finally {
+      setLoading(false);
     }
   };
 

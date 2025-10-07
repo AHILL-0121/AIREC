@@ -1,0 +1,1692 @@
+# AI-Powered LinkedIn Clone - Development Prompt
+
+Build a production-ready MVP for an **AI-Powered Recruitment Platform** (LinkedIn Clone) with intelligent job-candidate matching.
+
+---
+
+## 🎯 Project Overview
+
+Create a modern recruitment platform featuring:
+- LinkedIn-style professional networking
+- AI-driven job matching using advanced data structures
+- Real-time candidate-recruiter communication
+- Bias-reduction analytics and skill assessments
+
+**Tech Stack:**
+- **Frontend:** Next.js 14 (JavaScript/JSX only), TailwindCSS, Zustand
+- **Backend:** Python FastAPI
+- **Database:** MongoDB
+- **AI:** Gemini/OpenAI APIs for resume parsing and matching
+- **External APIs:** LinkedIn OAuth, Indeed API, HR Assessment APIs
+
+---
+
+## 🏗️ System Architecture
+
+### **Core Data Structures & Algorithms:**
+1. **Bipartite Graphs** - Model candidate-job relationships and optimal matching
+2. **Hash Tables** - Fast skill indexing and lookup (O(1) access)
+3. **Priority Queues** - Rank candidates by match score efficiently
+4. **Trie Trees** - Autocomplete skill search with prefix matching
+5. **Graph Algorithms** - Maximum matching for job assignments
+
+---
+
+## 📦 Implementation Requirements
+
+### **FRONTEND (Next.js 14 - JavaScript/JSX)**
+
+#### Folder Structure:
+```
+/app
+  ├── layout.js                   # Root layout
+  ├── page.js                     # Landing/Feed
+  ├── /profile
+  │   └── page.js                 # User profile + resume
+  ├── /jobs
+  │   └── page.js                 # Job listings + AI recommendations
+  ├── /recruiter
+  │   └── page.js                 # Recruiter dashboard
+  ├── /messages
+  │   └── page.js                 # Real-time chat
+  ├── /analytics
+  │   └── page.js                 # Performance metrics
+  └── /settings
+      └── page.js                 # User preferences
+
+/components
+  ├── Navbar.jsx
+  ├── Sidebar.jsx
+  ├── JobCard.jsx
+  ├── ProfileCard.jsx
+  ├── ResumeUpload.jsx
+  ├── AIAnalysisWidget.jsx
+  ├── ChatBox.jsx
+  ├── SkillTag.jsx
+  ├── LoadingSkeleton.jsx
+  └── Toast.jsx
+
+/hooks
+  └── useAIRecommendations.js
+
+/lib
+  ├── api.js                      # Backend API wrappers
+  └── utils.js                    # Trie search, sorting helpers
+
+/store
+  └── userStore.js                # Zustand state management
+
+tailwind.config.js
+next.config.js
+jsconfig.json                     # For path aliases
+```
+
+#### Key Component Examples:
+
+**Navbar.jsx:**
+```javascript
+'use client';
+import { useState } from 'react';
+import Link from 'next/link';
+import { useUserStore } from '@/store/userStore';
+
+export default function Navbar() {
+  const { user, logout } = useUserStore();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  return (
+    <nav className="bg-white shadow-md px-6 py-4">
+      <div className="flex items-center justify-between max-w-7xl mx-auto">
+        <Link href="/" className="text-2xl font-bold text-blue-600">
+          RecruiterAI
+        </Link>
+        
+        <input
+          type="text"
+          placeholder="Search jobs, skills..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-96 px-4 py-2 border rounded-lg"
+        />
+        
+        <div className="flex gap-4">
+          <Link href="/jobs">Jobs</Link>
+          <Link href="/profile">Profile</Link>
+          {user?.role === 'recruiter' && (
+            <Link href="/recruiter">Dashboard</Link>
+          )}
+          <button onClick={logout}>Logout</button>
+        </div>
+      </div>
+    </nav>
+  );
+}
+```
+
+**ResumeUpload.jsx:**
+```javascript
+'use client';
+import { useState } from 'react';
+import { uploadResume } from '@/lib/api';
+
+export default function ResumeUpload({ userId }) {
+  const [file, setFile] = useState(null);
+  const [parsing, setParsing] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const handleUpload = async () => {
+    if (!file) return;
+    
+    setParsing(true);
+    const formData = new FormData();
+    formData.append('resume', file);
+    formData.append('user_id', userId);
+    
+    try {
+      const response = await uploadResume(formData);
+      setResult(response.data);
+    } catch (error) {
+      console.error('Upload failed:', error);
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow">
+      <h3 className="text-xl font-bold mb-4">Upload Resume</h3>
+      
+      <input
+        type="file"
+        accept=".pdf,.doc,.docx"
+        onChange={(e) => setFile(e.target.files[0])}
+        className="mb-4"
+      />
+      
+      <button
+        onClick={handleUpload}
+        disabled={!file || parsing}
+        className="bg-blue-600 text-white px-6 py-2 rounded-lg"
+      >
+        {parsing ? 'Parsing with AI...' : 'Upload & Parse'}
+      </button>
+      
+      {result && (
+        <div className="mt-6">
+          <h4 className="font-semibold">Extracted Skills:</h4>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {result.skills.map((skill, idx) => (
+              <span key={idx} className="bg-blue-100 px-3 py-1 rounded-full">
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**JobCard.jsx:**
+```javascript
+import Link from 'next/link';
+
+export default function JobCard({ job, matchScore }) {
+  return (
+    <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-xl font-bold">{job.title}</h3>
+          <p className="text-gray-600">{job.company}</p>
+        </div>
+        {matchScore && (
+          <div className="bg-green-100 px-3 py-1 rounded-full">
+            {matchScore}% Match
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-4">
+        <p className="text-gray-700 line-clamp-3">{job.description}</p>
+      </div>
+      
+      <div className="flex flex-wrap gap-2 mt-4">
+        {job.required_skills.slice(0, 5).map((skill, idx) => (
+          <span key={idx} className="bg-gray-100 px-3 py-1 rounded text-sm">
+            {skill}
+          </span>
+        ))}
+      </div>
+      
+      <Link
+        href={`/jobs/${job._id}`}
+        className="mt-4 inline-block text-blue-600 font-semibold"
+      >
+        View Details →
+      </Link>
+    </div>
+  );
+}
+```
+
+#### Store Setup (Zustand):
+
+**userStore.js:**
+```javascript
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+export const useUserStore = create(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      
+      setUser: (user, token) => set({ user, token }),
+      
+      logout: () => set({ user: null, token: null }),
+      
+      updateProfile: (updates) => set((state) => ({
+        user: { ...state.user, ...updates }
+      })),
+    }),
+    {
+      name: 'user-storage',
+    }
+  )
+);
+```
+
+#### API Wrapper:
+
+**lib/api.js:**
+```javascript
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+// Helper function
+async function fetchAPI(endpoint, options = {}) {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    },
+  });
+  
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(data.error || 'API request failed');
+  }
+  
+  return data;
+}
+
+// Auth endpoints
+export const login = (credentials) => 
+  fetchAPI('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  });
+
+export const signup = (userData) =>
+  fetchAPI('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify(userData),
+  });
+
+// Profile endpoints
+export const uploadResume = async (formData) => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(`${API_BASE}/profile/upload-resume`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  
+  return response.json();
+};
+
+export const getProfile = (userId) => 
+  fetchAPI(`/profile/${userId}`);
+
+export const updateProfile = (userId, updates) =>
+  fetchAPI(`/profile/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+
+// Job endpoints
+export const searchJobs = (params) =>
+  fetchAPI(`/jobs/search?${new URLSearchParams(params)}`);
+
+export const getRecommendedJobs = (userId) =>
+  fetchAPI(`/jobs/recommendations/${userId}`);
+
+export const createJob = (jobData) =>
+  fetchAPI('/jobs', {
+    method: 'POST',
+    body: JSON.stringify(jobData),
+  });
+
+// Matching endpoints
+export const getCandidatesForJob = (jobId) =>
+  fetchAPI(`/ai-match/candidates/${jobId}`);
+
+export const getMatchScore = (userId, jobId) =>
+  fetchAPI(`/ai-match/score/${userId}/${jobId}`);
+
+// Analytics endpoints
+export const getBiasReport = () =>
+  fetchAPI('/analytics/bias-report');
+
+export const getSkillGaps = (userId) =>
+  fetchAPI(`/analytics/skill-gaps/${userId}`);
+```
+
+#### Utility Functions:
+
+**lib/utils.js:**
+```javascript
+// Trie implementation for skill autocomplete
+class TrieNode {
+  constructor() {
+    this.children = {};
+    this.isEnd = false;
+    this.skill = null;
+  }
+}
+
+class Trie {
+  constructor() {
+    this.root = new TrieNode();
+  }
+  
+  insert(skill) {
+    let node = this.root;
+    for (const char of skill.toLowerCase()) {
+      if (!node.children[char]) {
+        node.children[char] = new TrieNode();
+      }
+      node = node.children[char];
+    }
+    node.isEnd = true;
+    node.skill = skill;
+  }
+  
+  search(prefix) {
+    let node = this.root;
+    for (const char of prefix.toLowerCase()) {
+      if (!node.children[char]) return [];
+      node = node.children[char];
+    }
+    
+    const results = [];
+    this._collectSkills(node, results);
+    return results;
+  }
+  
+  _collectSkills(node, results) {
+    if (node.isEnd) {
+      results.push(node.skill);
+    }
+    for (const child of Object.values(node.children)) {
+      this._collectSkills(child, results);
+    }
+  }
+}
+
+export const skillTrie = new Trie();
+
+// Initialize with common skills
+const commonSkills = [
+  'JavaScript', 'Python', 'React', 'Node.js', 'MongoDB',
+  'FastAPI', 'Machine Learning', 'Data Science', 'AWS',
+  'Docker', 'Kubernetes', 'TypeScript', 'Next.js'
+];
+
+commonSkills.forEach(skill => skillTrie.insert(skill));
+
+// Utility functions
+export function calculateMatchPercentage(userSkills, jobSkills) {
+  const userSet = new Set(userSkills.map(s => s.toLowerCase()));
+  const jobSet = new Set(jobSkills.map(s => s.toLowerCase()));
+  
+  const intersection = [...userSet].filter(s => jobSet.has(s));
+  return Math.round((intersection.length / jobSet.size) * 100);
+}
+
+export function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+export function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+```
+
+#### Page Examples:
+
+**app/page.js (Home Feed):**
+```javascript
+'use client';
+import { useEffect, useState } from 'react';
+import { useUserStore } from '@/store/userStore';
+import { getRecommendedJobs } from '@/lib/api';
+import Navbar from '@/components/Navbar';
+import JobCard from '@/components/JobCard';
+
+export default function Home() {
+  const { user } = useUserStore();
+  const [recommendedJobs, setRecommendedJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      loadRecommendations();
+    }
+  }, [user]);
+
+  const loadRecommendations = async () => {
+    try {
+      const response = await getRecommendedJobs(user._id);
+      setRecommendedJobs(response.data);
+    } catch (error) {
+      console.error('Failed to load recommendations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Feed */}
+          <div className="lg:col-span-2">
+            <h2 className="text-2xl font-bold mb-6">
+              Recommended Jobs for You
+            </h2>
+            
+            {loading ? (
+              <div>Loading...</div>
+            ) : (
+              <div className="space-y-4">
+                {recommendedJobs.map(job => (
+                  <JobCard
+                    key={job._id}
+                    job={job}
+                    matchScore={job.match_score}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Sidebar */}
+          <div>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="font-bold mb-4">Your Profile Strength</h3>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full"
+                  style={{ width: '75%' }}
+                />
+              </div>
+              <p className="text-sm text-gray-600 mt-2">75% Complete</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+```
+
+**app/jobs/page.js:**
+```javascript
+'use client';
+import { useState, useEffect } from 'react';
+import { searchJobs } from '@/lib/api';
+import { skillTrie } from '@/lib/utils';
+import Navbar from '@/components/Navbar';
+import JobCard from '@/components/JobCard';
+
+export default function JobsPage() {
+  const [jobs, setJobs] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [skillFilter, setSkillFilter] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+
+  useEffect(() => {
+    loadJobs();
+  }, []);
+
+  const loadJobs = async (params = {}) => {
+    try {
+      const response = await searchJobs(params);
+      setJobs(response.data);
+    } catch (error) {
+      console.error('Failed to load jobs:', error);
+    }
+  };
+
+  const handleSkillInput = (value) => {
+    setSkillFilter(value);
+    if (value.length > 0) {
+      const matches = skillTrie.search(value);
+      setSuggestions(matches.slice(0, 5));
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const handleSearch = () => {
+    loadJobs({ query: searchTerm, skills: skillFilter });
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h1 className="text-3xl font-bold mb-6">Find Your Next Job</h1>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input
+              type="text"
+              placeholder="Job title or keyword"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-4 py-2 border rounded-lg"
+            />
+            
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Skills (e.g., React, Python)"
+                value={skillFilter}
+                onChange={(e) => handleSkillInput(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+              
+              {suggestions.length > 0 && (
+                <div className="absolute z-10 w-full bg-white border rounded-lg mt-1 shadow-lg">
+                  {suggestions.map((skill, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setSkillFilter(skill);
+                        setSuggestions([]);
+                      }}
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    >
+                      {skill}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <button
+              onClick={handleSearch}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 gap-4">
+          {jobs.map(job => (
+            <JobCard key={job._id} job={job} />
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+```
+
+---
+
+### **BACKEND (Python FastAPI)**
+
+#### Folder Structure:
+```
+/backend
+  ├── main.py                     # FastAPI entry point
+  │
+  ├── /routes
+  │   ├── auth.py                 # Authentication endpoints
+  │   ├── profile.py              # Profile + resume handling
+  │   ├── jobs.py                 # Job CRUD + recommendations
+  │   ├── recruiter.py            # Candidate management
+  │   ├── ai_match.py             # Matching engine
+  │   └── analytics.py            # Bias & performance metrics
+  │
+  ├── /services
+  │   ├── resume_parser.py        # Gemini/OpenAI NLP integration
+  │   ├── job_recommendation.py   # Graph-based matching
+  │   ├── ranking_engine.py       # Priority queue candidate ranking
+  │   ├── trie_search.py          # Skill autocomplete
+  │   ├── bias_analysis.py        # Fairness algorithms
+  │   └── assessment_api.py       # External skill tests
+  │
+  ├── /models
+  │   ├── user_model.py
+  │   ├── job_model.py
+  │   └── match_model.py
+  │
+  ├── /utils
+  │   ├── db.py                   # MongoDB connector
+  │   ├── auth_utils.py
+  │   └── graph_utils.py
+  │
+  └── requirements.txt
+```
+
+#### Main Application Setup:
+
+**main.py:**
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from routes import auth, profile, jobs, recruiter, ai_match, analytics
+from utils.db import connect_to_mongo, close_mongo_connection
+
+app = FastAPI(title="RecruiterAI API", version="1.0.0")
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Database Events
+@app.on_event("startup")
+async def startup_db():
+    await connect_to_mongo()
+
+@app.on_event("shutdown")
+async def shutdown_db():
+    await close_mongo_connection()
+
+# Include Routers
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(profile.router, prefix="/api/profile", tags=["Profile"])
+app.include_router(jobs.router, prefix="/api/jobs", tags=["Jobs"])
+app.include_router(recruiter.router, prefix="/api/recruiter", tags=["Recruiter"])
+app.include_router(ai_match.router, prefix="/api/ai-match", tags=["AI Matching"])
+app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
+
+@app.get("/")
+async def root():
+    return {"message": "RecruiterAI API is running"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+#### Database Connection:
+
+**utils/db.py:**
+```python
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ASCENDING, DESCENDING
+import os
+
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+DB_NAME = "recruiter_ai"
+
+client = None
+database = None
+
+async def connect_to_mongo():
+    global client, database
+    client = AsyncIOMotorClient(MONGODB_URL)
+    database = client[DB_NAME]
+    
+    # Create indexes
+    await database.users.create_index([("email", ASCENDING)], unique=True)
+    await database.jobs.create_index([("title", ASCENDING)])
+    await database.matches.create_index([("user_id", ASCENDING), ("job_id", ASCENDING)])
+    
+    print("Connected to MongoDB")
+
+async def close_mongo_connection():
+    global client
+    if client:
+        client.close()
+        print("Closed MongoDB connection")
+
+def get_database():
+    return database
+```
+
+#### Authentication Routes:
+
+**routes/auth.py:**
+```python
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, EmailStr
+from utils.db import get_database
+from utils.auth_utils import hash_password, verify_password, create_access_token
+from datetime import datetime
+
+router = APIRouter()
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    role: str = "candidate"  # candidate or recruiter
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+@router.post("/signup")
+async def signup(data: SignupRequest):
+    db = get_database()
+    
+    # Check if user exists
+    existing_user = await db.users.find_one({"email": data.email})
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Create user
+    hashed_pwd = hash_password(data.password)
+    user_doc = {
+        "email": data.email,
+        "password": hashed_pwd,
+        "name": data.name,
+        "role": data.role,
+        "skills": [],
+        "experience": 0,
+        "resume_url": None,
+        "parsed_resume": {},
+        "created_at": datetime.utcnow()
+    }
+    
+    result = await db.users.insert_one(user_doc)
+    user_doc["_id"] = str(result.inserted_id)
+    
+    # Generate token
+    token = create_access_token({"user_id": str(result.inserted_id)})
+    
+    # Remove password from response
+    del user_doc["password"]
+    
+    return {
+        "success": True,
+        "data": {
+            "user": user_doc,
+            "token": token
+        }
+    }
+
+@router.post("/login")
+async def login(data: LoginRequest):
+    db = get_database()
+    
+    # Find user
+    user = await db.users.find_one({"email": data.email})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
+    
+    # Verify password
+    if not verify_password(data.password, user["password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
+    
+    # Generate token
+    token = create_access_token({"user_id": str(user["_id"])})
+    
+    # Remove password from response
+    user["_id"] = str(user["_id"])
+    del user["password"]
+    
+    return {
+        "success": True,
+        "data": {
+            "user": user,
+            "token": token
+        }
+    }
+```
+
+#### Authentication Utilities:
+
+**utils/auth_utils.py:**
+```python
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from datetime import datetime, timedelta
+import os
+
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def verify_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+```
+
+#### Profile Routes:
+
+**routes/profile.py:**
+```python
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from bson import ObjectId
+from utils.db import get_database
+from services.resume_parser import parse_resume_with_ai
+import os
+import uuid
+
+router = APIRouter()
+
+@router.post("/upload-resume")
+async def upload_resume(
+    user_id: str = Form(...),
+    resume: UploadFile = File(...)
+):
+    db = get_database()
+    
+    # Save file
+    file_extension = os.path.splitext(resume.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    file_path = f"./uploads/{unique_filename}"
+    
+    os.makedirs("./uploads", exist_ok=True)
+    
+    with open(file_path, "wb") as f:
+        content = await resume.read()
+        f.write(content)
+    
+    # Parse resume with AI
+    parsed_data = await parse_resume_with_ai(file_path)
+    
+    # Update user profile
+    await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "resume_url": file_path,
+                "parsed_resume": parsed_data,
+                "skills": parsed_data.get("skills", []),
+                "experience": parsed_data.get("experience_years", 0)
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "data": parsed_data
+    }
+
+@router.get("/{user_id}")
+async def get_profile(user_id: str):
+    db = get_database()
+    
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user["_id"] = str(user["_id"])
+    del user["password"]
+    
+    return {
+        "success": True,
+        "data": user
+    }
+
+@router.put("/{user_id}")
+async def update_profile(user_id: str, updates: dict):
+    db = get_database()
+    
+    # Remove protected fields
+    protected_fields = ["_id", "email", "password", "role"]
+    for field in protected_fields:
+        updates.pop(field, None)
+    
+    result = await db.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": updates}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {
+        "success": True,
+        "data": {"message": "Profile updated successfully"}
+    }
+```
+
+#### Resume Parser Service:
+
+**services/resume_parser.py:**
+```python
+import google.generativeai as genai
+import os
+import json
+import PyPDF2
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+async def parse_resume_with_ai(file_path: str) -> dict:
+    # Extract text from PDF
+    resume_text = extract_text_from_pdf(file_path)
+    
+    # Configure Gemini
+    model = genai.GenerativeModel('gemini-pro')
+    
+    prompt = f"""
+    Extract structured information from this resume in JSON format:
+    
+    Required fields:
+    - skills: List of technical skills (programming languages, frameworks, tools)
+    - experience_years: Total years of professional experience (number)
+    - education: List of degrees and institutions
+    - achievements: Key accomplishments
+    - job_titles: Previous job titles
+    
+    Resume text:
+    {resume_text}
+    
+    Return ONLY valid JSON, no markdown formatting.
+    """
+    
+    response = model
+
+
+    ```python
+    response = model.generate_content(prompt)
+    
+    try:
+        # Parse JSON response
+        parsed_data = json.loads(response.text)
+        
+        # Validate and clean data
+        if "skills" not in parsed_data:
+            parsed_data["skills"] = []
+        if "experience_years" not in parsed_data:
+            parsed_data["experience_years"] = 0
+            
+        return parsed_data
+        
+    except json.JSONDecodeError:
+        # Fallback parsing if JSON is malformed
+        return {
+            "skills": [],
+            "experience_years": 0,
+            "education": [],
+            "achievements": [],
+            "job_titles": [],
+            "raw_text": resume_text
+        }
+
+def extract_text_from_pdf(file_path: str) -> str:
+    """Extract text content from PDF file"""
+    try:
+        with open(file_path, 'rb') as file:
+            pdf_reader = PyPDF2.PdfReader(file)
+            text = ""
+            for page in pdf_reader.pages:
+                text += page.extract_text()
+            return text
+    except Exception as e:
+        print(f"Error extracting PDF text: {e}")
+        return ""
+```
+
+#### Job Routes:
+
+**routes/jobs.py:**
+```python
+from fastapi import APIRouter, HTTPException, Query
+from bson import ObjectId
+from utils.db import get_database
+from services.job_recommendation import get_recommendations_for_user
+from datetime import datetime
+from typing import Optional
+
+router = APIRouter()
+
+@router.get("/search")
+async def search_jobs(
+    query: Optional[str] = None,
+    skills: Optional[str] = None,
+    location: Optional[str] = None,
+    limit: int = 20
+):
+    db = get_database()
+    
+    # Build search filter
+    search_filter = {}
+    
+    if query:
+        search_filter["$or"] = [
+            {"title": {"$regex": query, "$options": "i"}},
+            {"description": {"$regex": query, "$options": "i"}}
+        ]
+    
+    if skills:
+        skill_list = [s.strip() for s in skills.split(",")]
+        search_filter["required_skills"] = {"$in": skill_list}
+    
+    if location:
+        search_filter["location"] = {"$regex": location, "$options": "i"}
+    
+    # Execute search
+    cursor = db.jobs.find(search_filter).limit(limit)
+    jobs = await cursor.to_list(length=limit)
+    
+    # Convert ObjectId to string
+    for job in jobs:
+        job["_id"] = str(job["_id"])
+        job["posted_by"] = str(job["posted_by"])
+    
+    return {
+        "success": True,
+        "data": jobs
+    }
+
+@router.get("/recommendations/{user_id}")
+async def get_recommended_jobs(user_id: str):
+    db = get_database()
+    
+    # Get user profile
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get AI recommendations
+    recommendations = await get_recommendations_for_user(user)
+    
+    return {
+        "success": True,
+        "data": recommendations
+    }
+
+@router.post("")
+async def create_job(job_data: dict):
+    db = get_database()
+    
+    # Validate recruiter
+    recruiter = await db.users.find_one({"_id": ObjectId(job_data["posted_by"])})
+    if not recruiter or recruiter["role"] != "recruiter":
+        raise HTTPException(status_code=403, detail="Only recruiters can post jobs")
+    
+    # Create job document
+    job_doc = {
+        "title": job_data["title"],
+        "company": job_data["company"],
+        "description": job_data["description"],
+        "required_skills": job_data["required_skills"],
+        "location": job_data.get("location", "Remote"),
+        "min_experience": job_data.get("min_experience", 0),
+        "max_experience": job_data.get("max_experience", 10),
+        "salary_range": job_data.get("salary_range"),
+        "posted_by": ObjectId(job_data["posted_by"]),
+        "created_at": datetime.utcnow(),
+        "status": "active"
+    }
+    
+    result = await db.jobs.insert_one(job_doc)
+    job_doc["_id"] = str(result.inserted_id)
+    job_doc["posted_by"] = str(job_doc["posted_by"])
+    
+    return {
+        "success": True,
+        "data": job_doc
+    }
+
+@router.get("/{job_id}")
+async def get_job(job_id: str):
+    db = get_database()
+    
+    job = await db.jobs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    job["_id"] = str(job["_id"])
+    job["posted_by"] = str(job["posted_by"])
+    
+    return {
+        "success": True,
+        "data": job
+    }
+```
+
+#### Job Recommendation Service:
+
+**services/job_recommendation.py:**
+```python
+from utils.db import get_database
+from bson import ObjectId
+
+async def get_recommendations_for_user(user: dict) -> list:
+    """
+    Generate job recommendations using skill matching
+    """
+    db = get_database()
+    
+    user_skills = set([skill.lower() for skill in user.get("skills", [])])
+    user_experience = user.get("experience", 0)
+    
+    # Get all active jobs
+    all_jobs = await db.jobs.find({"status": "active"}).to_list(length=100)
+    
+    # Calculate match scores
+    scored_jobs = []
+    for job in all_jobs:
+        job_skills = set([skill.lower() for skill in job.get("required_skills", [])])
+        
+        # Calculate skill overlap
+        skill_intersection = user_skills & job_skills
+        skill_match_score = len(skill_intersection) / len(job_skills) if job_skills else 0
+        
+        # Calculate experience fit
+        min_exp = job.get("min_experience", 0)
+        max_exp = job.get("max_experience", 100)
+        
+        if min_exp <= user_experience <= max_exp:
+            exp_score = 1.0
+        elif user_experience < min_exp:
+            exp_score = max(0, 1 - (min_exp - user_experience) * 0.2)
+        else:
+            exp_score = max(0, 1 - (user_experience - max_exp) * 0.1)
+        
+        # Combined score (70% skills, 30% experience)
+        total_score = (skill_match_score * 0.7) + (exp_score * 0.3)
+        match_percentage = int(total_score * 100)
+        
+        if match_percentage > 30:  # Only include jobs with >30% match
+            job["_id"] = str(job["_id"])
+            job["posted_by"] = str(job["posted_by"])
+            job["match_score"] = match_percentage
+            job["matched_skills"] = list(skill_intersection)
+            scored_jobs.append(job)
+    
+    # Sort by match score
+    scored_jobs.sort(key=lambda x: x["match_score"], reverse=True)
+    
+    return scored_jobs[:10]  # Return top 10
+```
+
+#### AI Matching Routes (Bipartite Graph):
+
+**routes/ai_match.py:**
+```python
+from fastapi import APIRouter, HTTPException
+from bson import ObjectId
+from utils.db import get_database
+from services.ranking_engine import rank_candidates_for_job
+from utils.graph_utils import build_bipartite_graph, find_optimal_matches
+
+router = APIRouter()
+
+@router.post("/run")
+async def run_matching_algorithm():
+    """
+    Execute bipartite matching algorithm for all active jobs
+    """
+    db = get_database()
+    
+    # Get all candidates and jobs
+    candidates = await db.users.find({"role": "candidate"}).to_list(length=1000)
+    jobs = await db.jobs.find({"status": "active"}).to_list(length=1000)
+    
+    # Build bipartite graph
+    graph = build_bipartite_graph(candidates, jobs)
+    
+    # Find optimal matches
+    matches = find_optimal_matches(graph)
+    
+    # Store matches in database
+    match_docs = []
+    for candidate_id, job_id, score in matches:
+        match_doc = {
+            "user_id": ObjectId(candidate_id),
+            "job_id": ObjectId(job_id),
+            "match_score": score,
+            "graph_edge_weight": score,
+            "status": "pending"
+        }
+        match_docs.append(match_doc)
+    
+    if match_docs:
+        await db.matches.delete_many({})  # Clear old matches
+        await db.matches.insert_many(match_docs)
+    
+    return {
+        "success": True,
+        "data": {
+            "total_matches": len(match_docs),
+            "message": "Matching algorithm completed successfully"
+        }
+    }
+
+@router.get("/candidates/{job_id}")
+async def get_candidates_for_job(job_id: str, limit: int = 20):
+    """
+    Get ranked list of candidates for a specific job
+    """
+    db = get_database()
+    
+    # Verify job exists
+    job = await db.jobs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Get and rank candidates
+    ranked_candidates = await rank_candidates_for_job(job)
+    
+    return {
+        "success": True,
+        "data": ranked_candidates[:limit]
+    }
+
+@router.get("/score/{user_id}/{job_id}")
+async def get_match_score(user_id: str, job_id: str):
+    """
+    Calculate match score between specific user and job
+    """
+    db = get_database()
+    
+    # Get user and job
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    job = await db.jobs.find_one({"_id": ObjectId(job_id)})
+    
+    if not user or not job:
+        raise HTTPException(status_code=404, detail="User or Job not found")
+    
+    # Calculate match score
+    user_skills = set([s.lower() for s in user.get("skills", [])])
+    job_skills = set([s.lower() for s in job.get("required_skills", [])])
+    
+    skill_overlap = user_skills & job_skills
+    match_score = len(skill_overlap) / len(job_skills) if job_skills else 0
+    
+    return {
+        "success": True,
+        "data": {
+            "match_percentage": int(match_score * 100),
+            "matched_skills": list(skill_overlap),
+            "missing_skills": list(job_skills - user_skills)
+        }
+    }
+```
+
+#### Graph Utilities (Bipartite Matching):
+
+**utils/graph_utils.py:**
+```python
+import networkx as nx
+from networkx.algorithms import bipartite
+
+def calculate_edge_weight(candidate: dict, job: dict) -> float:
+    """
+    Calculate edge weight between candidate and job
+    """
+    candidate_skills = set([s.lower() for s in candidate.get("skills", [])])
+    job_skills = set([s.lower() for s in job.get("required_skills", [])])
+    
+    # Skill match
+    skill_overlap = len(candidate_skills & job_skills)
+    skill_score = skill_overlap / len(job_skills) if job_skills else 0
+    
+    # Experience match
+    candidate_exp = candidate.get("experience", 0)
+    min_exp = job.get("min_experience", 0)
+    max_exp = job.get("max_experience", 100)
+    
+    if min_exp <= candidate_exp <= max_exp:
+        exp_score = 1.0
+    else:
+        exp_score = max(0, 1 - abs(candidate_exp - min_exp) * 0.1)
+    
+    # Combined weight (70% skills, 30% experience)
+    weight = (skill_score * 0.7) + (exp_score * 0.3)
+    return weight
+
+def build_bipartite_graph(candidates: list, jobs: list):
+    """
+    Build bipartite graph with candidates on one side and jobs on the other
+    """
+    G = nx.Graph()
+    
+    # Add candidate nodes
+    for candidate in candidates:
+        candidate_id = str(candidate["_id"])
+        G.add_node(candidate_id, bipartite=0, data=candidate)
+    
+    # Add job nodes
+    for job in jobs:
+        job_id = str(job["_id"])
+        G.add_node(job_id, bipartite=1, data=job)
+    
+    # Add edges with weights
+    for candidate in candidates:
+        candidate_id = str(candidate["_id"])
+        for job in jobs:
+            job_id = str(job["_id"])
+            weight = calculate_edge_weight(candidate, job)
+            
+            if weight > 0.3:  # Only add edges with >30% match
+                G.add_edge(candidate_id, job_id, weight=weight)
+    
+    return G
+
+def find_optimal_matches(graph):
+    """
+    Find maximum weighted matching in bipartite graph
+    """
+    # Get candidate and job nodes
+    candidate_nodes = {n for n, d in graph.nodes(data=True) if d['bipartite'] == 0}
+    job_nodes = {n for n, d in graph.nodes(data=True) if d['bipartite'] == 1}
+    
+    # Find maximum weighted matching
+    matching = bipartite.maximum_matching(graph, top_nodes=candidate_nodes)
+    
+    # Extract matches with scores
+    matches = []
+    for candidate_id, job_id in matching.items():
+        if candidate_id in candidate_nodes:
+            if graph.has_edge(candidate_id, job_id):
+                weight = graph[candidate_id][job_id]['weight']
+                matches.append((candidate_id, job_id, weight))
+    
+    return matches
+```
+
+#### Ranking Engine (Priority Queue):
+
+**services/ranking_engine.py:**
+```python
+import heapq
+from utils.db import get_database
+from bson import ObjectId
+
+async def rank_candidates_for_job(job: dict) -> list:
+    """
+    Rank candidates using priority queue (max heap)
+    """
+    db = get_database()
+    
+    # Get all candidates
+    candidates = await db.users.find({"role": "candidate"}).to_list(length=1000)
+    
+    # Create max heap (use negative scores for max heap)
+    heap = []
+    
+    job_skills = set([s.lower() for s in job.get("required_skills", [])])
+    
+    for candidate in candidates:
+        candidate_skills = set([s.lower() for s in candidate.get("skills", [])])
+        
+        # Calculate match score
+        skill_overlap = candidate_skills & job_skills
+        skill_score = len(skill_overlap) / len(job_skills) if job_skills else 0
+        
+        # Experience score
+        candidate_exp = candidate.get("experience", 0)
+        min_exp = job.get("min_experience", 0)
+        max_exp = job.get("max_experience", 100)
+        
+        if min_exp <= candidate_exp <= max_exp:
+            exp_score = 1.0
+        else:
+            exp_score = max(0, 1 - abs(candidate_exp - min_exp) * 0.15)
+        
+        # Total score
+        total_score = (skill_score * 0.7) + (exp_score * 0.3)
+        match_percentage = int(total_score * 100)
+        
+        if match_percentage > 30:
+            # Push to heap (negative score for max heap)
+            candidate["_id"] = str(candidate["_id"])
+            del candidate["password"]
+            heapq.heappush(heap, (
+                -match_percentage,  # Negative for max heap
+                candidate["_id"],
+                {
+                    **candidate,
+                    "match_score": match_percentage,
+                    "matched_skills": list(skill_overlap)
+                }
+            ))
+    
+    # Extract ranked candidates
+    ranked = []
+    while heap:
+        score, candidate_id, candidate_data = heapq.heappop(heap)
+        ranked.append(candidate_data)
+    
+    return ranked
+```
+
+#### Analytics Routes:
+
+**routes/analytics.py:**
+```python
+from fastapi import APIRouter
+from utils.db import get_database
+from services.bias_analysis import calculate_bias_metrics, analyze_skill_gaps
+from bson import ObjectId
+
+router = APIRouter()
+
+@router.get("/bias-report")
+async def get_bias_report():
+    """
+    Generate diversity and fairness metrics
+    """
+    db = get_database()
+    
+    # Get all matches
+    matches = await db.matches.find().to_list(length=1000)
+    
+    # Calculate bias metrics
+    bias_metrics = await calculate_bias_metrics(matches)
+    
+    return {
+        "success": True,
+        "data": bias_metrics
+    }
+
+@router.get("/skill-gaps/{user_id}")
+async def get_skill_gaps(user_id: str):
+    """
+    Analyze skill gaps for a candidate
+    """
+    db = get_database()
+    
+    # Get user
+    user = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        return {"success": False, "error": "User not found"}
+    
+    # Get recommended jobs
+    jobs = await db.jobs.find({"status": "active"}).to_list(length=50)
+    
+    # Analyze skill gaps
+    skill_gaps = analyze_skill_gaps(user, jobs)
+    
+    return {
+        "success": True,
+        "data": skill_gaps
+    }
+```
+
+#### Bias Analysis Service:
+
+**services/bias_analysis.py:**
+```python
+from collections import Counter
+
+async def calculate_bias_metrics(matches: list) -> dict:
+    """
+    Calculate fairness and diversity metrics
+    """
+    if not matches:
+        return {
+            "total_matches": 0,
+            "diversity_score": 0,
+            "fairness_metrics": {}
+        }
+    
+    # Calculate distribution statistics
+    match_scores = [m["match_score"] for m in matches]
+    
+    avg_score = sum(match_scores) / len(match_scores)
+    min_score = min(match_scores)
+    max_score = max(match_scores)
+    
+    # Calculate score variance (lower is more fair)
+    variance = sum((score - avg_score) ** 2 for score in match_scores) / len(match_scores)
+    
+    return {
+        "total_matches": len(matches),
+        "average_match_score": round(avg_score, 2),
+        "min_match_score": min_score,
+        "max_match_score": max_score,
+        "score_variance": round(variance, 2),
+        "fairness_index": round(100 - (variance * 10), 2)  # Higher is better
+    }
+
+def analyze_skill_gaps(user: dict, jobs: list) -> dict:
+    """
+    Identify most in-demand skills the user is missing
+    """
+    user_skills = set([s.lower() for s in user.get("skills", [])])
+    
+    # Count skill frequency across all jobs
+    all_job_skills = []
+    for job in jobs:
+        all_job_skills.extend([s.lower() for s in job.get("required_skills", [])])
+    
+    skill_frequency = Counter(all_job_skills)
+    
+    # Find missing skills
+    missing_skills = []
+    for skill, count in skill_frequency.most_common(20):
+        if skill not in user_skills:
+            missing_skills.append({
+                "skill": skill,
+                "demand": count,
+                "jobs_requiring": count
+            })
+    
+    return {
+        "current_skills": list(user_skills),
+        "skill_count": len(user_skills),
+        "missing_high_demand_skills": missing_skills[:10],
+        "recommendations": [
+            f"Learn {skill['skill']} (required by {skill['demand']} jobs)"
+            for skill in missing_skills[:5]
+        ]
+    }
+```
+
+#### Requirements File:
+
+**requirements.txt:**
+```
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+motor==3.3.2
+pymongo==4.6.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+PyPDF2==3.0.1
+google-generativeai==0.3.1
+networkx==3.2.1
+pydantic[email]==2.5.0
+python-dotenv==1.0.0
+```
+
+---
+
+## 🚀 Development Phases
+
+### **Phase 1 (Week 1-2): Foundation**
+- ✅ Setup Next.js frontend with routing
+- ✅ Setup FastAPI backend with MongoDB
+- ✅ Implement authentication (signup/login)
+- ✅ Create profile management
+- ✅ Integrate resume upload with Gemini AI parsing
+
+### **Phase 2 (Week 3-4): Core Features**
+- ✅ Build job search and filtering
+- ✅ Implement bipartite graph matching algorithm
+- ✅ Create recruiter dashboard
+- ✅ Add candidate ranking with priority queues
+
+### **Phase 3 (Week 5-6): Advanced Features**
+- 📝 Real-time messaging system
+- 📝 Analytics dashboard with bias metrics
+- 📝 Skill gap analysis
+- 📝 Interview scheduling
+
+### **Phase 4 (Week 7-8): Integrations**
+- 📝 LinkedIn OAuth integration
+- 📝 Indeed API for job data
+- 📝 External assessment API integration
+- 📝 Final testing and deployment
+
+---
+
+## 🔧 Environment Variables
+
+**Frontend (.env.local):**
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+```
+
+**Backend (.env):**
+```
+MONGODB_URL=mongodb://localhost:27017
+SECRET_KEY=your-secret-key-here
+GEMINI_API_KEY=your-gemini-api-key
+OPENAI_API_KEY=your-openai-api-key (optional)
+```
+
+---
+
+## 🎯 Quick Start Commands
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+**Backend:**
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+---
+
+**Start with Phase 1: Build the authentication system, profile page with resume upload, and integrate Gemini AI for resume parsing.**
